@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+version = "0.0.1-dev"
+name = "dust3r"
+
+requires-python = ">=3.10"
+
+dependencies = [
+    "gradio",
+    "matplotlib",
+    "opencv-python",
+    "scipy",
+    "einops",
+    "trimesh",
+    "roma",
+    "pyglet<2",
+]
+
+
+
+[project.optional-dependencies]
+
+dev = [
+    "poselib",
+    "pyrender",
+    "kapture",
+    "kapture-localization",
+    "numpy-quaternion",
+    "pillow-heif",
+    "pycolmap"
+]
+
+[tool.setuptools.packages.find]
+include = ["dust3r"]
+
+[tool.pytest.ini_options]
+# addopts = "-n=4 --typeguard-packages=inv3d --disable-warnings"
+addopts = "-n=4 --disable-warnings" # Typeguard has bug, it cannot be used to test the tensor on the cuda.
+testpaths = [
+    "tests",
+]
