@@ -91,6 +91,37 @@ class PixelwiseTaskWithDPT(nn.Module):
         if self.postprocess:
             out = self.postprocess(out, self.depth_mode, self.conf_mode)
         return out
+    
+class PixelwiseTaskWithDPTMultiHead(PixelwiseTaskWithDPT):
+    """ DPT module for dustsfm, can return 3D points + confidence + extra parameters for all pixels"""
+
+    def __init__(self, *, n_cls_token=0, hooks_idx=None, dim_tokens=None,
+                 output_width_ratio=1, num_channels=1, postprocess=None, depth_mode=None, conf_mode=None,
+                 extra_num_channels=1, depthcov_mode=None, **kwargs):
+        super(PixelwiseTaskWithDPTMultiHead, self).__init__(n_cls_token=n_cls_token,hooks_idx=hooks_idx,dim_tokens=dim_tokens,output_width_ratio=output_width_ratio,num_channels=num_channels,postprocess=postprocess,depth_mode=depth_mode,conf_mode=conf_mode,**kwargs)
+        
+        self.depthcov_mode = depthcov_mode
+        
+        # adding a new layer for extra output
+        assert n_cls_token == 0, "Not implemented"
+        dpt_extra_args = dict(output_width_ratio=output_width_ratio,
+                        num_channels=extra_num_channels,
+                        **kwargs)
+        if hooks_idx is not None:
+            dpt_extra_args.update(hooks=hooks_idx)
+        self.dpt_extra = DPTOutputAdapter_fix(**dpt_extra_args)
+        dpt_extra_init_args = {} if dim_tokens is None else {'dim_tokens_enc': dim_tokens}
+        self.dpt_extra_args.init(**dpt_extra_init_args)
+
+    def forward(self, x, img_info):
+        out = self.dpt(x, image_size=(img_info[0], img_info[1]))
+        out_extra = self.dpt_extra(x, image_size=(img_info[0], img_info[1]))
+        
+        # concat the two output
+        out = torch.cat([out, out_extra], dim=1) # B D H W
+        if self.postprocess:
+            out = self.postprocess(out, self.depth_mode, self.conf_mode, self.depthcov_mode)
+        return out
 
 
 def create_dpt_head(net, has_conf=False):
